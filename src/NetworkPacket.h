@@ -1,6 +1,8 @@
 #ifndef _NETWORK_PACKET_H_
 #define _NETWORK_PACKET_H_
 
+#include <QUuid>
+
 #include <kis_node.h>
 
 #include "CollabNetwork.h"
@@ -11,6 +13,7 @@ public:
     NodeMetadata(const KisNode *node);
     NodeMetadata(QDataStream &s);
 
+    QUuid nodeId;
     quint8 opacity;
     QVector<QPair<QString, QVariant>> props;
 
@@ -29,6 +32,7 @@ public:
     NodePixelPatch(const KisNode *node, const QRect &rect);
     NodePixelPatch(QDataStream &s);
 
+    QUuid nodeId;
     QRect rect;
     QByteArray data;
 

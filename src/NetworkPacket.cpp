@@ -2,8 +2,20 @@
 
 #include "NetworkPacket.h"
 
+NodeMetadata::NodeMetadata(const KisNode *node)
+    : opacity(node->opacity())
+    , nodeId(node->uuid())
+{
+    auto props = node->sectionModelProperties();
+    this->props = QVector<QPair<QString, QVariant>>(props.size());
+    for (int i = 0; i < props.size(); i++) {
+        this->props[i] = qMakePair(props[i].id, props[i].state);
+    }
+}
+
 void NodeMetadata::send(QDataStream &out)
 {
+    out << nodeId;
     out << quint8(opacity);
 
     out << quint32(props.size());
@@ -30,18 +42,9 @@ void NodeMetadata::send(QDataStream &out)
     }
 }
 
-NodeMetadata::NodeMetadata(const KisNode *node)
-    : opacity(node->opacity())
-{
-    auto props = node->sectionModelProperties();
-    this->props = QVector<QPair<QString, QVariant>>(props.size());
-    for (int i = 0; i < props.size(); i++) {
-        this->props[i] = qMakePair(props[i].id, props[i].state);
-    }
-}
-
 NodeMetadata::NodeMetadata(QDataStream &s)
 {
+    s >> nodeId;
     s >> opacity;
     quint32 propsLen;
     s >> propsLen;
@@ -92,17 +95,9 @@ void NodeMetadata::apply(KisImage *image)
     // TODO
 }
 
-NodePixelPatch::NodePixelPatch(QDataStream &s)
-{
-    s >> rect;
-    int size;
-    s >> size;
-    data.reserve(size);
-    s.readRawData(data.data(), size);
-}
-
 NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
     : rect(rect)
+    , nodeId(node->uuid())
 {
     auto device = node->paintDevice();
     auto pixelSize = device->pixelSize();
@@ -110,8 +105,19 @@ NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
     device->readBytes(reinterpret_cast<quint8 *>(data.data_ptr()), rect);
 }
 
+NodePixelPatch::NodePixelPatch(QDataStream &s)
+{
+    s >> nodeId;
+    s >> rect;
+    int size;
+    s >> size;
+    data.reserve(size);
+    s.readRawData(data.data(), size);
+}
+
 void NodePixelPatch::send(QDataStream &out)
 {
+    out << nodeId;
     out << rect;
     out << int(data.size());
     out << data;
