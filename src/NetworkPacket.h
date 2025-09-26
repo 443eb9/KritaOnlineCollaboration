@@ -1,5 +1,5 @@
-#ifndef _NODE_STATE_H_
-#define _NODE_STATE_H_
+#ifndef _NETWORK_PACKET_H_
+#define _NETWORK_PACKET_H_
 
 #include <kis_node.h>
 

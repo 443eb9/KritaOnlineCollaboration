@@ -16,7 +16,7 @@
 #include <kis_transaction.h>
 
 #include "CollabNetwork.h"
-#include "NodeState.h"
+#include "NetworkPacket.h"
 #include "OnlineCollabDock.h"
 
 OnlineCollabDock::OnlineCollabDock()

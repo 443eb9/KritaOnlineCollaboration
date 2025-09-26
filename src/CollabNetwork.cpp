@@ -7,7 +7,7 @@
 #include <kis_paint_layer.h>
 
 #include "CollabNetwork.h"
-#include "NodeState.h"
+#include "NetworkPacket.h"
 
 CollabClient::CollabClient(QObject *parent, KisImage *image)
     : QObject(parent)

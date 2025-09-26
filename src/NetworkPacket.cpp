@@ -1,6 +1,6 @@
 #include <kis_paint_device.h>
 
-#include "NodeState.h"
+#include "NetworkPacket.h"
 
 void NodeMetadata::send(QDataStream &out)
 {
