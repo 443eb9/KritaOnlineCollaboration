@@ -14,10 +14,12 @@ CollabClient::CollabClient(QObject *parent, KisImage *image)
     , m_image(image)
     , m_socket(this)
     , m_socketConnected(true)
+    , m_curPacketExpectedSize(0)
 {
     connect(&m_socket, &QTcpSocket::connected, [this]() {
         m_socketConnected = true;
     });
+    connect(&m_socket, &QTcpSocket::readyRead, this, &CollabClient::receiveBytes);
 }
 
 CollabClient::~CollabClient()
@@ -58,31 +60,49 @@ QTcpSocket *CollabClient::socket()
 
 void CollabClient::receiveBytes()
 {
-    if (m_curPacketExpectedSize) {
-        if (m_socket.bytesAvailable() < qint64(sizeof(int))) {
-            return;
+    qDebug() << "Parsing bytes: " << m_socket.bytesAvailable();
+
+    while (true) {
+        if (m_curPacketExpectedSize == 0) {
+            if (m_socket.bytesAvailable() < qint64(sizeof(quint32))) {
+                break;
+            }
+
+            QDataStream sizeHeaderStream(m_socket.read(4));
+            quint32 size;
+            sizeHeaderStream >> size;
+
+            qDebug() << "Received packet with size of: " << size;
+
+            m_curPacketExpectedSize = size;
+            m_curPacketBuffer.reserve(size);
         }
 
-        QDataStream in(&m_socket);
-        int size;
-        in >> size;
+        if (quint32(m_curPacketBuffer.size()) != m_curPacketExpectedSize) {
+            auto bytesToRead =
+                qMin(m_socket.bytesAvailable(), qint64(m_curPacketExpectedSize - m_curPacketBuffer.size()));
+            qDebug() << "Reading extra bytes to complete packet: " << bytesToRead;
+            m_curPacketBuffer.append(m_socket.read(bytesToRead));
+        }
 
-        m_curPacketExpectedSize = size;
-        m_curPacketBuffer.reserve(size);
-    } else if (quint32(m_curPacketBuffer.size()) != m_curPacketExpectedSize) {
-        auto bytesToRead = qMin(m_socket.bytesAvailable(), qint64(m_curPacketExpectedSize - m_curPacketBuffer.size()));
-        m_curPacketBuffer.append(m_socket.read(bytesToRead));
-    } else {
+        qDebug() << "Current bytes: " << m_curPacketBuffer.size() << ", expecting " << m_curPacketExpectedSize;
+
+        if (quint32(m_curPacketBuffer.size()) != m_curPacketExpectedSize) {
+            break;
+        }
+
         QDataStream in(m_curPacketBuffer);
         quint8 type;
         in >> type;
 
         switch (type) {
         case DataPacket::NodeMetadataType: {
+            qDebug("Received NodeMetadataType");
             NodeMetadata::apply(in, m_image);
             break;
         }
         case DataPacket::NodePixelPatchType: {
+            qDebug("Received NodePixelPatchType");
             break;
         }
         default: {
@@ -90,6 +110,9 @@ void CollabClient::receiveBytes()
             break;
         }
         }
+
+        m_curPacketExpectedSize = 0;
+        m_curPacketBuffer.clear();
     }
 }
 

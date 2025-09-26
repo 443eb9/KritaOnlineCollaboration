@@ -14,6 +14,11 @@ public:
     quint8 opacity;
     QVector<QPair<QString, QVariant>> props;
 
+    virtual quint8 packetType()
+    {
+        return DataPacket::NodeMetadataType;
+    }
+
     void send(QDataStream &s) override;
     void static apply(QDataStream &s, KisImage *image);
 };
@@ -21,11 +26,16 @@ public:
 class NodePixelPatch : public DataPacket
 {
 public:
-    NodePixelPatch(const KisNode *node, const QRect& rect);
+    NodePixelPatch(const KisNode *node, const QRect &rect);
     NodePixelPatch(QDataStream &s);
 
     QRect rect;
     QByteArray data;
+
+    virtual quint8 packetType()
+    {
+        return DataPacket::NodePixelPatchType;
+    }
 
     void send(QDataStream &s) override;
     void static apply(QDataStream &s, KisImage *image);

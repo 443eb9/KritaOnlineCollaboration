@@ -16,6 +16,8 @@ public:
     static const quint8 NodeMetadataType = 0;
     static const quint8 NodePixelPatchType = 1;
 
+    virtual quint8 packetType();
+
     QByteArray toNetworkPacket()
     {
         QByteArray dataBuf;
@@ -24,8 +26,11 @@ public:
 
         QByteArray buf;
         QDataStream bufStream(&buf, QIODevice::WriteOnly);
-        bufStream << int(dataBuf.size());
-        bufStream << dataBuf;
+        bufStream << quint32(dataBuf.size());
+        bufStream << packetType();
+        buf.append(dataBuf);
+
+        qDebug() << "Created packet with body size: " << dataBuf.size() << ", total size: " << buf.size();
 
         return buf;
     }
