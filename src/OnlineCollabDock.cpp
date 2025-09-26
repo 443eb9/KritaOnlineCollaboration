@@ -71,16 +71,15 @@ OnlineCollabDock::OnlineCollabDock()
             setStatusText(QString("Invalid ip address: %1").arg(ipText));
             return;
         }
-        setNetworkButtonState(false);
 
         bool success = m_server->start(ip, portText.toUShort());
 
         if (success) {
             setStatusText(QString("Successfully started server on address %1 with port %2").arg(ipText).arg(portText));
+            setNetworkButtonState(true);
         } else {
             setStatusText(QString("Unable to server on address %1 with port %2").arg(ipText).arg(portText));
             m_stopBtn->setEnabled(true);
-            setNetworkButtonState(true);
         }
     });
 
@@ -185,7 +184,12 @@ void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
     qDebug() << "Node changed: " << node->name();
     KisSharedPtr<NodeMetadata> n = new NodeMetadata(node.data());
-    m_client->sendPacket(n);
+
+    if (m_isServer) {
+        m_server->broadcast(n->toNetworkPacket(), nullptr);
+    } else {
+        m_client->sendPacket(n);
+    }
 }
 
 void OnlineCollabDock::imageUpdated(const QRect &rect)

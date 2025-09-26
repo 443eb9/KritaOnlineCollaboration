@@ -33,10 +33,7 @@ void CollabClient::sendPacket(KisSharedPtr<DataPacket> p)
 {
     qDebug() << "Sending packet";
     if (m_socketConnected) {
-        QByteArray buf;
-        QDataStream s(&buf, QIODevice::WriteOnly);
-        p->send(s);
-        m_socket.write(buf);
+        m_socket.write(p->toNetworkPacket());
     } else {
         m_queue.enqueue(p);
     }
@@ -62,12 +59,12 @@ QTcpSocket *CollabClient::socket()
 void CollabClient::receiveBytes()
 {
     if (m_curPacketExpectedSize) {
-        if (m_socket.bytesAvailable() < qint64(sizeof(quint32))) {
+        if (m_socket.bytesAvailable() < qint64(sizeof(int))) {
             return;
         }
 
         QDataStream in(&m_socket);
-        quint32 size;
+        int size;
         in >> size;
 
         m_curPacketExpectedSize = size;
@@ -123,7 +120,7 @@ void CollabServer::onNewConnection()
     });
 }
 
-void CollabServer::broadcast(QByteArray data, QTcpSocket *src)
+void CollabServer::broadcast(QByteArray data, QTcpSocket *src = nullptr)
 {
     for (auto conn : m_clients) {
         if (conn != src) {

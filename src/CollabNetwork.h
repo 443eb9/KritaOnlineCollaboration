@@ -16,10 +16,25 @@ public:
     static const quint8 NodeMetadataType = 0;
     static const quint8 NodePixelPatchType = 1;
 
+    QByteArray toNetworkPacket()
+    {
+        QByteArray dataBuf;
+        QDataStream dataStream(&dataBuf, QIODevice::WriteOnly);
+        send(dataStream);
+
+        QByteArray buf;
+        QDataStream bufStream(&buf, QIODevice::WriteOnly);
+        bufStream << int(dataBuf.size());
+        bufStream << dataBuf;
+
+        return buf;
+    }
+
+protected:
     virtual void send(QDataStream &s);
 };
 
-class CollabClient: public QObject
+class CollabClient : public QObject
 {
     Q_OBJECT
 
