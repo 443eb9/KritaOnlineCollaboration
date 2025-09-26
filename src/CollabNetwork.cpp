@@ -61,7 +61,7 @@ QTcpSocket *CollabClient::socket()
 void CollabClient::receiveBytes()
 {
     while (m_socket.bytesAvailable()) {
-        qDebug() << "Parsing bytes: " << m_socket.bytesAvailable();
+        // qDebug() << "Parsing bytes: " << m_socket.bytesAvailable();
 
         if (m_curPacketExpectedSize == 0) {
             if (m_socket.bytesAvailable() < qint64(sizeof(quint32))) {
@@ -72,7 +72,7 @@ void CollabClient::receiveBytes()
             quint32 size;
             sizeHeaderStream >> size;
 
-            qDebug() << "Received packet with size of: " << size;
+            // qDebug() << "Received packet with size of: " << size;
 
             m_curPacketExpectedSize = size;
             m_curPacketBuffer.reserve(size);
@@ -81,11 +81,11 @@ void CollabClient::receiveBytes()
         if (quint32(m_curPacketBuffer.size()) != m_curPacketExpectedSize) {
             auto bytesToRead =
                 qMin(m_socket.bytesAvailable(), qint64(m_curPacketExpectedSize - m_curPacketBuffer.size()));
-            qDebug() << "Reading extra bytes to complete packet: " << bytesToRead;
+            // qDebug() << "Reading extra bytes to complete packet: " << bytesToRead;
             m_curPacketBuffer.append(m_socket.read(bytesToRead));
         }
 
-        qDebug() << "Current bytes: " << m_curPacketBuffer.size() << ", expecting " << m_curPacketExpectedSize;
+        // qDebug() << "Current bytes: " << m_curPacketBuffer.size() << ", expecting " << m_curPacketExpectedSize;
 
         if (quint32(m_curPacketBuffer.size()) != m_curPacketExpectedSize) {
             break;
@@ -100,7 +100,7 @@ void CollabClient::receiveBytes()
         switch (type) {
         case DataPacket::NodeMetadataType: {
             qDebug("Received NodeMetadataType");
-            p = new NodeMetadata(in);
+            p = new PaintLayerMetadata(in);
             break;
         }
         case DataPacket::NodePixelPatchType: {
@@ -150,7 +150,7 @@ void CollabServer::onNewConnection()
 
 void CollabServer::broadcast(QByteArray data, QTcpSocket *src = nullptr)
 {
-    qDebug() << "Broadcasting data with size: " << data.size();
+    // qDebug() << "Broadcasting data with size: " << data.size();
 
     for (auto conn : m_clients) {
         if (conn != src) {

@@ -31,7 +31,7 @@ public:
         bufStream << packetType();
         buf.append(dataBuf);
 
-        qDebug() << "Created packet with body size: " << dataBuf.size() << ", total size: " << buf.size();
+        // qDebug() << "Created packet with body size: " << dataBuf.size() << ", total size: " << buf.size();
 
         return buf;
     }

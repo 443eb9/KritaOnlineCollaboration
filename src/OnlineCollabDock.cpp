@@ -13,6 +13,7 @@
 #include <kis_command_utils.h>
 #include <kis_config.h>
 #include <kis_icon_utils.h>
+#include <kis_paint_layer.h>
 #include <kis_transaction.h>
 
 #include "CollabNetwork.h"
@@ -187,12 +188,21 @@ void OnlineCollabDock::setNetworkButtonState(bool running)
 void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
     qDebug() << "Node changed: " << node->name();
-    KisSharedPtr<NodeMetadata> n = new NodeMetadata(node.data());
+    KisSharedPtr<DataPacket> p = 0;
 
-    if (m_isServer) {
-        m_server->broadcast(n->toNetworkPacket(), nullptr);
-    } else {
-        m_client->sendPacket(n);
+    if (node->inherits("KisPaintLayer")) {
+        p = new PaintLayerMetadata(static_cast<KisPaintLayer *>(node.data()));
+    }
+
+    if (!p) {
+        // TODO notify
+        return;
+    }
+
+    if (m_isServer && m_server) {
+        m_server->broadcast(p->toNetworkPacket(), nullptr);
+    } else if (m_client) {
+        m_client->sendPacket(p);
     }
 }
 

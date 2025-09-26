@@ -7,15 +7,19 @@
 
 #include "CollabNetwork.h"
 
-class NodeMetadata : public DataPacket
+class PaintLayerMetadata : public DataPacket
 {
 public:
-    NodeMetadata(const KisNode *node);
-    NodeMetadata(QDataStream &s);
+    PaintLayerMetadata(const KisPaintLayer *node);
+    PaintLayerMetadata(QDataStream &s);
 
     QUuid nodeId;
     quint8 opacity;
-    QVector<QPair<QString, QVariant>> props;
+    quint8 alphaInherit;
+    quint8 locked;
+    quint8 visible;
+    quint8 alphaLocked;
+    QString compositeOp;
 
     virtual quint8 packetType()
     {

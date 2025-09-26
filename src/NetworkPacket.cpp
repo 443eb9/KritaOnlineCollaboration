@@ -1,98 +1,54 @@
+#include <KoProperties.h>
+#include <kis_image.h>
+#include <kis_layer_utils.h>
 #include <kis_paint_device.h>
+#include <kis_paint_layer.h>
 
 #include "NetworkPacket.h"
 
-NodeMetadata::NodeMetadata(const KisNode *node)
-    : opacity(node->opacity())
-    , nodeId(node->uuid())
+PaintLayerMetadata::PaintLayerMetadata(const KisPaintLayer *node)
+    : nodeId(node->uuid())
+    , opacity(node->opacity())
+    , alphaInherit(node->alphaChannelDisabled() ? 1 : 0)
+    , locked(node->userLocked() ? 1 : 0)
+    , visible(node->visible() ? 1 : 0)
+    , alphaLocked(node->alphaLocked() ? 1 : 0)
+    , compositeOp(node->compositeOpId())
 {
-    auto props = node->sectionModelProperties();
-    this->props = QVector<QPair<QString, QVariant>>(props.size());
-    for (int i = 0; i < props.size(); i++) {
-        this->props[i] = qMakePair(props[i].id, props[i].state);
-    }
 }
 
-void NodeMetadata::send(QDataStream &out)
+void PaintLayerMetadata::send(QDataStream &out)
 {
-    out << nodeId;
-    out << quint8(opacity);
-
-    out << quint32(props.size());
-    for (const auto &[name, value] : props) {
-        QByteArray nameBytes = name.toUtf8();
-        out << quint32(nameBytes.size());
-        out.writeRawData(nameBytes.constData(), nameBytes.size());
-
-        out << quint32(value.type());
-        switch (value.type()) {
-        case QVariant::String: {
-            QByteArray strBytes = value.toString().toUtf8();
-            out << quint32(strBytes.size());
-            out.writeRawData(strBytes.constData(), strBytes.size());
-            break;
-        }
-        case QVariant::Bool: {
-            out << quint8(value.toBool() ? 1 : 0);
-            break;
-        }
-        default:
-            break;
-        }
-    }
+    out << nodeId << opacity << alphaInherit << locked << visible << alphaLocked;
+    out << quint32(compositeOp.size());
+    auto compositeOpBuf = compositeOp.toUtf8();
+    out.writeRawData(compositeOpBuf.data(), compositeOpBuf.size());
 }
 
-NodeMetadata::NodeMetadata(QDataStream &s)
+PaintLayerMetadata::PaintLayerMetadata(QDataStream &s)
 {
-    s >> nodeId;
-    s >> opacity;
-    quint32 propsLen;
-    s >> propsLen;
+    s >> nodeId >> opacity >> alphaInherit >> locked >> visible >> alphaLocked;
 
-    qDebug() << "Props len:" << propsLen;
-
-    props.reserve(propsLen);
-    for (quint32 i = 0; i < propsLen; i++) {
-        quint32 nameLen;
-        s >> nameLen;
-        QByteArray nameBytes(nameLen, Qt::Uninitialized);
-        s.readRawData(nameBytes.data(), nameLen);
-        QString name = QString::fromUtf8(nameBytes);
-
-        qDebug() << "Name len:" << nameLen << ", Name:" << name;
-
-        quint32 valueType;
-        s >> valueType;
-
-        QVariant value;
-        switch (valueType) {
-        case QVariant::String: {
-            quint32 valueLen;
-            s >> valueLen;
-            QByteArray valueBytes(valueLen, Qt::Uninitialized);
-            s.readRawData(valueBytes.data(), valueLen);
-            value = QString::fromUtf8(valueBytes);
-            break;
-        }
-        case QVariant::Bool: {
-            quint8 b;
-            s >> b;
-            value = QVariant(bool(b));
-            break;
-        }
-        default:
-            qWarning() << "Unknown value type:" << valueType;
-            break;
-        }
-
-        props.push_back(qMakePair(name, value));
-    }
+    quint32 compositeOpLen;
+    s >> compositeOpLen;
+    QVector<char> compositeOpBuf(compositeOpLen);
+    s.readRawData(compositeOpBuf.data(), compositeOpLen);
+    compositeOp = QString::fromUtf8(compositeOpBuf.data(), compositeOpLen);
 }
 
-void NodeMetadata::apply(KisImage *image)
+void PaintLayerMetadata::apply(KisImage *image)
 {
-    qDebug() << opacity << endl << props;
-    // TODO
+    auto node = KisLayerUtils::findNodeByUuid(image->root(), nodeId);
+    if (node == 0) {
+        return;
+    }
+    auto layer = static_cast<KisPaintLayer *>(node.data());
+    layer->setOpacity(opacity);
+    layer->disableAlphaChannel(alphaInherit);
+    layer->setUserLocked(locked);
+    layer->setVisible(visible);
+    layer->setAlphaLocked(alphaLocked);
+    layer->setCompositeOpId(compositeOp);
 }
 
 NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
