@@ -34,6 +34,8 @@ public:
     void unsetCanvas() override;
     void initNetwork(bool isServer);
     void setNetworkButtonState(bool running);
+    void setStatusText(QString text);
+    void clearStatusText();
 
 public Q_SLOTS:
     void nodeChanged(KisNodeSP node);
@@ -47,6 +49,7 @@ private:
     CollabServer *m_server;
     CollabClient *m_client;
 
+    QLabel *m_statusText;
     QPushButton *m_startServerBtn;
     QPushButton *m_connectBtn;
     QPushButton *m_stopBtn;

@@ -2,6 +2,7 @@
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QIntValidator>
+#include <QLabel>
 #include <QMetaEnum>
 #include <QRegExpValidator>
 #include <QSpacerItem>
@@ -27,6 +28,9 @@ OnlineCollabDock::OnlineCollabDock()
     setWidget(mainWidget);
     auto mainLayout = new QVBoxLayout(mainWidget);
 
+    m_statusText = new QLabel();
+    m_statusText->setWordWrap(true);
+
     auto connectParams = new QFormLayout();
     m_ipInput = new QLineEdit();
     QString ipRange = "(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])";
@@ -48,23 +52,34 @@ OnlineCollabDock::OnlineCollabDock()
     netBtns->addWidget(m_connectBtn);
     netBtns->addWidget(m_stopBtn);
 
+    mainLayout->addWidget(m_statusText);
     mainLayout->addLayout(connectParams);
     mainLayout->addLayout(netBtns);
 
     connect(m_startServerBtn, &QPushButton::clicked, [this]() {
+        clearStatusText();
         if (m_ipInput->text().isEmpty() || m_portInput->text().isEmpty()) {
             return;
         }
 
         initNetwork(true);
-        bool success = m_server->start(QHostAddress(m_ipInput->text()), m_portInput->text().toUShort());
+        auto ipText = m_ipInput->text();
+        auto portText = m_portInput->text();
+        auto ip = QHostAddress(ipText);
 
-        if (!success) {
-            m_stopBtn->setEnabled(true);
-            // TODO hint user failure
-            qDebug() << "Failed to start server";
+        if (ip.isNull()) {
+            setStatusText(QString("Invalid ip address: %1").arg(ipText));
+            return;
+        }
+        setNetworkButtonState(false);
+
+        bool success = m_server->start(ip, portText.toUShort());
+
+        if (success) {
+            setStatusText(QString("Successfully started server on address %1 with port %2").arg(ipText).arg(portText));
         } else {
-            qDebug() << "Successfully started server";
+            setStatusText(QString("Unable to server on address %1 with port %2").arg(ipText).arg(portText));
+            m_stopBtn->setEnabled(true);
             setNetworkButtonState(true);
         }
     });
@@ -73,16 +88,29 @@ OnlineCollabDock::OnlineCollabDock()
         setNetworkButtonState(true);
 
         initNetwork(false);
-        m_client->connectTo(QHostAddress(m_ipInput->text()), m_portInput->text().toUShort());
+        auto ipText = m_ipInput->text();
+        auto portText = m_portInput->text();
+        auto ip = QHostAddress(m_ipInput->text());
+
+        if (ip.isNull()) {
+            setStatusText(QString("Invalid ip address: %1").arg(ipText));
+            return;
+        }
+
+        setStatusText(QString("Connecting to %1 with port %2").arg(ipText).arg(portText));
+        m_client->connectTo(ip, m_portInput->text().toUShort());
         connect(m_client->socket(), &QTcpSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
             auto me = QMetaEnum::fromType<QAbstractSocket::SocketError>();
-            qDebug() << "Client socket error: " << me.valueToKey(error);
-            // TODO hint user
+            setStatusText(QString("Unable to connect to server on address %1 with port %2: %3")
+                              .arg(m_ipInput->text())
+                              .arg(m_portInput->text())
+                              .arg(me.valueToKey(error)));
             setNetworkButtonState(false);
         });
     });
 
     connect(m_stopBtn, &QPushButton::clicked, [this]() {
+        clearStatusText();
         setNetworkButtonState(false);
 
         if (m_server) {
@@ -95,6 +123,16 @@ OnlineCollabDock::OnlineCollabDock()
         m_server = 0;
         m_client = 0;
     });
+}
+
+void OnlineCollabDock::setStatusText(QString text)
+{
+    m_statusText->setText(text);
+}
+
+void OnlineCollabDock::clearStatusText()
+{
+    m_statusText->setText(QString());
 }
 
 void OnlineCollabDock::setCanvas(KoCanvasBase *canvas)
