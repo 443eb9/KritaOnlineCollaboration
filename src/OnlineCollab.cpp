@@ -49,6 +49,7 @@ extern "C" {
 Q_DECL_EXPORT void load_online_collab_plugin()
 {
     qDebug() << "Start loading online collab plugin...";
+    OnlineCollabPlugin plugin(nullptr, QVariantList());
 }
 }
 
