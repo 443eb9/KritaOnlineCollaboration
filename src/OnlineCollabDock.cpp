@@ -56,6 +56,10 @@ OnlineCollabDock::OnlineCollabDock()
     mainLayout->addLayout(connectParams);
     mainLayout->addLayout(netBtns);
 
+    // TODO read from settings
+    m_ipInput->setText("127.0.0.1");
+    m_portInput->setText("45304");
+
     connect(m_startServerBtn, &QPushButton::clicked, [this]() {
         clearStatusText();
         if (m_ipInput->text().isEmpty() || m_portInput->text().isEmpty()) {
