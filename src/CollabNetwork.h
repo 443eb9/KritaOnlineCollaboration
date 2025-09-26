@@ -19,10 +19,12 @@ public:
     virtual void send(QDataStream &s);
 };
 
-class CollabClient
+class CollabClient: public QObject
 {
+    Q_OBJECT
+
 public:
-    CollabClient(KisImage *image);
+    CollabClient(QObject *parent, KisImage *image);
     ~CollabClient();
 
     void connectTo(const QHostAddress &addr, quint16 port);
@@ -37,6 +39,7 @@ private:
     QTcpSocket m_socket;
     QQueue<KisSharedPtr<DataPacket>> m_queue;
 
+    bool m_socketConnected;
     quint32 m_curPacketExpectedSize;
     QByteArray m_curPacketBuffer;
 

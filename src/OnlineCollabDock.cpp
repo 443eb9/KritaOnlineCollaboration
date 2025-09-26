@@ -107,6 +107,11 @@ OnlineCollabDock::OnlineCollabDock()
                               .arg(me.valueToKey(error)));
             setNetworkButtonState(false);
         });
+        connect(m_client->socket(), &QTcpSocket::connected, [this]() {
+            setStatusText(QString("Successfully connected to server on address %1 with port %2")
+                              .arg(m_ipInput->text())
+                              .arg(m_portInput->text()));
+        });
     });
 
     connect(m_stopBtn, &QPushButton::clicked, [this]() {
@@ -163,7 +168,7 @@ void OnlineCollabDock::initNetwork(bool isServer)
     if (isServer) {
         m_server = new CollabServer();
     } else {
-        m_client = new CollabClient(m_canvas->image().data());
+        m_client = new CollabClient(this, m_canvas->image().data());
     }
 }
 
@@ -179,8 +184,8 @@ void OnlineCollabDock::setNetworkButtonState(bool running)
 void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
     qDebug() << "Node changed: " << node->name();
-    NodeMetadata n(node.data());
-    // m_client.sendPacket(&n);
+    KisSharedPtr<NodeMetadata> n = new NodeMetadata(node.data());
+    m_client->sendPacket(n);
 }
 
 void OnlineCollabDock::imageUpdated(const QRect &rect)

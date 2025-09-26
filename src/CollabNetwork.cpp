@@ -1,3 +1,5 @@
+#include <QIODevice>
+
 #include <KoProperties.h>
 #include <kis_datamanager.h>
 #include <kis_node.h>
@@ -7,9 +9,15 @@
 #include "CollabNetwork.h"
 #include "NodeState.h"
 
-CollabClient::CollabClient(KisImage *image)
-    : m_image(image)
+CollabClient::CollabClient(QObject *parent, KisImage *image)
+    : QObject(parent)
+    , m_image(image)
+    , m_socket(this)
+    , m_socketConnected(true)
 {
+    connect(&m_socket, &QTcpSocket::connected, [this]() {
+        m_socketConnected = true;
+    });
 }
 
 CollabClient::~CollabClient()
@@ -24,14 +32,12 @@ void CollabClient::connectTo(const QHostAddress &addr, quint16 port)
 void CollabClient::sendPacket(KisSharedPtr<DataPacket> p)
 {
     qDebug() << "Sending packet";
-    if (m_socket.state() == QAbstractSocket::ConnectedState) {
+    if (m_socketConnected) {
         QByteArray buf;
-        QDataStream s(buf);
-        qDebug() << "Writing blob";
+        QDataStream s(&buf, QIODevice::WriteOnly);
         p->send(s);
         m_socket.write(buf);
     } else {
-        qDebug() << "Enqueued for later send";
         m_queue.enqueue(p);
     }
 }
