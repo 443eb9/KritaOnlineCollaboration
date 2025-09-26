@@ -3,6 +3,7 @@
 
 #include <QDockWidget>
 #include <QObject>
+#include <QLineEdit>
 
 #include <KoCanvasObserverBase.h>
 #include <klocalizedstring.h>
@@ -36,7 +37,10 @@ public Q_SLOTS:
 private:
     int lastIndex = 0;
     KisCanvas2 *m_canvas;
-    CollabNetwork m_network;
+    CollabClient m_network;
+
+    QLineEdit* m_ipInput;
+    QLineEdit* m_portInput;
 };
 
 #endif

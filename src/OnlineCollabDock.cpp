@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QHBoxLayout>
+#include <QPushButton>
 #include <QSpacerItem>
 #include <QVBoxLayout>
 
@@ -19,6 +20,21 @@ OnlineCollabDock::OnlineCollabDock()
     , m_network(0)
 {
     setWindowTitle(i18n("Online Collab"));
+    auto mainLayout = new QVBoxLayout(this);
+    setLayout(mainLayout);
+
+    auto connectParams = new QVBoxLayout();
+    m_ipInput = new QLineEdit();
+    m_portInput = new QLineEdit();
+    auto netBtns = new QHBoxLayout();
+    auto startServerBtn = new QPushButton("Start Server");
+    auto connectBtn = new QPushButton("Connet");
+    netBtns->addWidget(startServerBtn);
+    netBtns->addWidget(connectBtn);
+    connectParams->addWidget(m_ipInput);
+    connectParams->addWidget(m_portInput);
+    connectParams->addLayout(netBtns);
+    mainLayout->addLayout(connectParams);
 }
 
 void OnlineCollabDock::setCanvas(KoCanvasBase *canvas)
@@ -33,7 +49,6 @@ void OnlineCollabDock::setCanvas(KoCanvasBase *canvas)
     auto image = myCanvas->image();
     auto root = image->root();
 
-    m_network = CollabNetwork(image.data());
     connect(image.data(), &KisImage::sigNodeChanged, this, &OnlineCollabDock::nodeChanged);
     connect(image.data(), &KisImage::sigImageUpdated, this, &OnlineCollabDock::imageUpdated);
     qDebug() << "Current image: " << image->root()->name();
