@@ -17,6 +17,7 @@ public:
     static const quint8 NodePixelPatchType = 1;
 
     virtual quint8 packetType();
+    virtual void apply(KisImage *image);
 
     QByteArray toNetworkPacket()
     {

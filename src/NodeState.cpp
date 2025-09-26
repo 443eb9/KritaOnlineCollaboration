@@ -2,43 +2,31 @@
 
 #include "NodeState.h"
 
-NodeMetadata::NodeMetadata(QDataStream &s)
+void NodeMetadata::send(QDataStream &out)
 {
-    s >> opacity;
-    int propsLen;
-    s >> propsLen;
+    out << quint8(opacity);
 
-    QVector<QPair<QString, QVariant>> props(propsLen);
-    for (int _ = 0; _ < propsLen; _++) {
-        int nameLen;
-        s >> nameLen;
-        char nameBytes[nameLen];
-        s.readRawData(nameBytes, nameLen);
-        auto name = QString::fromUtf8(nameBytes, nameLen);
+    out << quint32(props.size());
+    for (const auto &[name, value] : props) {
+        QByteArray nameBytes = name.toUtf8();
+        out << quint32(nameBytes.size());
+        out.writeRawData(nameBytes.constData(), nameBytes.size());
 
-        quint32 valueType;
-        s >> valueType;
-        QVariant value(valueType);
-        switch (valueType) {
+        out << quint32(value.type());
+        switch (value.type()) {
         case QVariant::String: {
-            int valueLen;
-            s >> valueLen;
-            char valueBytes[valueLen];
-            s.readRawData(valueBytes, valueLen);
-            value.setValue(QString::fromUtf8(valueBytes, valueLen));
+            QByteArray strBytes = value.toString().toUtf8();
+            out << quint32(strBytes.size());
+            out.writeRawData(strBytes.constData(), strBytes.size());
             break;
         }
         case QVariant::Bool: {
-            quint8 b;
-            s >> b;
-            value.setValue(b);
-        }
-        default: {
+            out << quint8(value.toBool() ? 1 : 0);
             break;
         }
+        default:
+            break;
         }
-
-        props.push_back(qMakePair(name, value));
     }
 }
 
@@ -52,37 +40,55 @@ NodeMetadata::NodeMetadata(const KisNode *node)
     }
 }
 
-void NodeMetadata::send(QDataStream &out)
+NodeMetadata::NodeMetadata(QDataStream &s)
 {
-    out << quint8(opacity);
+    s >> opacity;
+    quint32 propsLen;
+    s >> propsLen;
 
-    out << int(props.size());
-    for (const auto &[name, value] : props) {
-        auto nameBytes = name.toUtf8();
-        out << int(nameBytes.size());
-        out << nameBytes;
+    qDebug() << "Props len:" << propsLen;
 
-        out << quint32(value.type());
-        switch (value.type()) {
+    props.reserve(propsLen);
+    for (quint32 i = 0; i < propsLen; i++) {
+        quint32 nameLen;
+        s >> nameLen;
+        QByteArray nameBytes(nameLen, Qt::Uninitialized);
+        s.readRawData(nameBytes.data(), nameLen);
+        QString name = QString::fromUtf8(nameBytes);
+
+        qDebug() << "Name len:" << nameLen << ", Name:" << name;
+
+        quint32 valueType;
+        s >> valueType;
+
+        QVariant value;
+        switch (valueType) {
         case QVariant::String: {
-            auto strBytes = value.toString().toUtf8();
-            out << strBytes.size();
-            out << strBytes;
+            quint32 valueLen;
+            s >> valueLen;
+            QByteArray valueBytes(valueLen, Qt::Uninitialized);
+            s.readRawData(valueBytes.data(), valueLen);
+            value = QString::fromUtf8(valueBytes);
             break;
         }
         case QVariant::Bool: {
-            auto b = value.toBool();
-            out << quint8(b);
-        }
-        default: {
+            quint8 b;
+            s >> b;
+            value = QVariant(bool(b));
             break;
         }
+        default:
+            qWarning() << "Unknown value type:" << valueType;
+            break;
         }
+
+        props.push_back(qMakePair(name, value));
     }
 }
 
-void NodeMetadata::apply(QDataStream &s, KisImage *image)
+void NodeMetadata::apply(KisImage *image)
 {
+    qDebug() << opacity << endl << props;
     // TODO
 }
 
@@ -111,7 +117,7 @@ void NodePixelPatch::send(QDataStream &out)
     out << data;
 }
 
-void NodePixelPatch::apply(QDataStream &s, KisImage *image)
+void NodePixelPatch::apply(KisImage *image)
 {
     // TODO
 }

@@ -95,21 +95,26 @@ void CollabClient::receiveBytes()
         quint8 type;
         in >> type;
 
+        DataPacket *p = nullptr;
+
         switch (type) {
         case DataPacket::NodeMetadataType: {
             qDebug("Received NodeMetadataType");
-            NodeMetadata::apply(in, m_image);
+            p = new NodeMetadata(in);
             break;
         }
         case DataPacket::NodePixelPatchType: {
             qDebug("Received NodePixelPatchType");
+            p = new NodePixelPatch(in);
             break;
         }
         default: {
             qDebug() << "Unknown packet type: " << type;
-            break;
+            return;
         }
         }
+
+        p->apply(m_image);
 
         m_curPacketExpectedSize = 0;
         m_curPacketBuffer.clear();
@@ -145,6 +150,8 @@ void CollabServer::onNewConnection()
 
 void CollabServer::broadcast(QByteArray data, QTcpSocket *src = nullptr)
 {
+    qDebug() << "Broadcasting data with size: " << data.size();
+
     for (auto conn : m_clients) {
         if (conn != src) {
             conn->write(data);

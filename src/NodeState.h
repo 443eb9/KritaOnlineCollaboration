@@ -20,7 +20,7 @@ public:
     }
 
     void send(QDataStream &s) override;
-    void static apply(QDataStream &s, KisImage *image);
+    void apply(KisImage *image) override;
 };
 
 class NodePixelPatch : public DataPacket
@@ -38,7 +38,7 @@ public:
     }
 
     void send(QDataStream &s) override;
-    void static apply(QDataStream &s, KisImage *image);
+    void apply(KisImage *image) override;
 };
 
 #endif
