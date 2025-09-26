@@ -60,9 +60,9 @@ QTcpSocket *CollabClient::socket()
 
 void CollabClient::receiveBytes()
 {
-    qDebug() << "Parsing bytes: " << m_socket.bytesAvailable();
+    while (m_socket.bytesAvailable()) {
+        qDebug() << "Parsing bytes: " << m_socket.bytesAvailable();
 
-    while (true) {
         if (m_curPacketExpectedSize == 0) {
             if (m_socket.bytesAvailable() < qint64(sizeof(quint32))) {
                 break;

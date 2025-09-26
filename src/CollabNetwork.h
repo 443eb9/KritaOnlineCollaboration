@@ -27,7 +27,7 @@ public:
 
         QByteArray buf;
         QDataStream bufStream(&buf, QIODevice::WriteOnly);
-        bufStream << quint32(dataBuf.size());
+        bufStream << quint32(dataBuf.size() + 1);
         bufStream << packetType();
         buf.append(dataBuf);
 
