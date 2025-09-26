@@ -1,6 +1,9 @@
 #include <QDebug>
+#include <QFormLayout>
 #include <QHBoxLayout>
-#include <QPushButton>
+#include <QIntValidator>
+#include <QMetaEnum>
+#include <QRegExpValidator>
 #include <QSpacerItem>
 #include <QVBoxLayout>
 
@@ -16,25 +19,82 @@
 #include "OnlineCollabDock.h"
 
 OnlineCollabDock::OnlineCollabDock()
-    : QDockWidget()
-    , m_network(0)
+    : m_server(0)
+    , m_client(0)
 {
     setWindowTitle(i18n("Online Collab"));
-    auto mainLayout = new QVBoxLayout(this);
-    setLayout(mainLayout);
+    auto mainWidget = new QWidget(this);
+    setWidget(mainWidget);
+    auto mainLayout = new QVBoxLayout(mainWidget);
 
-    auto connectParams = new QVBoxLayout();
+    auto connectParams = new QFormLayout();
     m_ipInput = new QLineEdit();
+    QString ipRange = "(?:[0-1]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])";
+    auto ipVal =
+        new QRegExpValidator(QRegExp("^" + ipRange + "\\." + ipRange + "\\." + ipRange + "\\." + ipRange + "$"));
+    m_ipInput->setValidator(ipVal);
     m_portInput = new QLineEdit();
+    auto portVal = new QIntValidator(0, 65535);
+    m_portInput->setValidator(portVal);
+    connectParams->addRow("IP", m_ipInput);
+    connectParams->addRow("Port", m_portInput);
+
     auto netBtns = new QHBoxLayout();
-    auto startServerBtn = new QPushButton("Start Server");
-    auto connectBtn = new QPushButton("Connet");
-    netBtns->addWidget(startServerBtn);
-    netBtns->addWidget(connectBtn);
-    connectParams->addWidget(m_ipInput);
-    connectParams->addWidget(m_portInput);
-    connectParams->addLayout(netBtns);
+    m_startServerBtn = new QPushButton("Start Server");
+    m_connectBtn = new QPushButton("Connect");
+    m_stopBtn = new QPushButton("Stop");
+    m_stopBtn->setEnabled(false);
+    netBtns->addWidget(m_startServerBtn);
+    netBtns->addWidget(m_connectBtn);
+    netBtns->addWidget(m_stopBtn);
+
     mainLayout->addLayout(connectParams);
+    mainLayout->addLayout(netBtns);
+
+    connect(m_startServerBtn, &QPushButton::clicked, [this]() {
+        if (m_ipInput->text().isEmpty() || m_portInput->text().isEmpty()) {
+            return;
+        }
+
+        initNetwork(true);
+        bool success = m_server->start(QHostAddress(m_ipInput->text()), m_portInput->text().toUShort());
+
+        if (!success) {
+            m_stopBtn->setEnabled(true);
+            // TODO hint user failure
+            qDebug() << "Failed to start server";
+        } else {
+            qDebug() << "Successfully started server";
+            setNetworkButtonState(true);
+        }
+    });
+
+    connect(m_connectBtn, &QPushButton::clicked, [this]() {
+        setNetworkButtonState(true);
+
+        initNetwork(false);
+        m_client->connectTo(QHostAddress(m_ipInput->text()), m_portInput->text().toUShort());
+        connect(m_client->socket(), &QTcpSocket::errorOccurred, [this](QAbstractSocket::SocketError error) {
+            auto me = QMetaEnum::fromType<QAbstractSocket::SocketError>();
+            qDebug() << "Client socket error: " << me.valueToKey(error);
+            // TODO hint user
+            setNetworkButtonState(false);
+        });
+    });
+
+    connect(m_stopBtn, &QPushButton::clicked, [this]() {
+        setNetworkButtonState(false);
+
+        if (m_server) {
+            delete m_server;
+        }
+        if (m_client) {
+            delete m_client;
+        }
+
+        m_server = 0;
+        m_client = 0;
+    });
 }
 
 void OnlineCollabDock::setCanvas(KoCanvasBase *canvas)
@@ -59,11 +119,30 @@ void OnlineCollabDock::unsetCanvas()
     setEnabled(false);
 }
 
+void OnlineCollabDock::initNetwork(bool isServer)
+{
+    m_isServer = isServer;
+    if (isServer) {
+        m_server = new CollabServer();
+    } else {
+        m_client = new CollabClient(m_canvas->image().data());
+    }
+}
+
+void OnlineCollabDock::setNetworkButtonState(bool running)
+{
+    m_startServerBtn->setEnabled(!running);
+    m_connectBtn->setEnabled(!running);
+    m_stopBtn->setEnabled(running);
+    m_ipInput->setEnabled(!running);
+    m_portInput->setEnabled(!running);
+}
+
 void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
     qDebug() << "Node changed: " << node->name();
     NodeMetadata n(node.data());
-    m_network.sendPacket(&n);
+    // m_client.sendPacket(&n);
 }
 
 void OnlineCollabDock::imageUpdated(const QRect &rect)
@@ -74,5 +153,5 @@ void OnlineCollabDock::imageUpdated(const QRect &rect)
     auto node = view->currentNode();
     qDebug() << "Current node: " << node->name();
     NodePixelPatch n(node.data(), rect);
-    m_network.sendPacket(&n);
+    // m_client.sendPacket(&n);
 }

@@ -16,6 +16,11 @@ CollabClient::~CollabClient()
 {
 }
 
+void CollabClient::connectTo(const QHostAddress &addr, quint16 port)
+{
+    m_socket.connectToHost(addr, port);
+}
+
 void CollabClient::sendPacket(KisSharedPtr<DataPacket> p)
 {
     qDebug() << "Sending packet";
@@ -41,6 +46,11 @@ void CollabClient::sendQueue()
     while (!m_queue.isEmpty()) {
         sendPacket(m_queue.dequeue());
     }
+}
+
+QTcpSocket *CollabClient::socket()
+{
+    return &m_socket;
 }
 
 void CollabClient::receiveBytes()

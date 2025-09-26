@@ -25,10 +25,12 @@ public:
     CollabClient(KisImage *image);
     ~CollabClient();
 
-    void connectTo();
+    void connectTo(const QHostAddress &addr, quint16 port);
     void queuePacket(KisSharedPtr<DataPacket> p);
     void sendPacket(KisSharedPtr<DataPacket> p);
     void sendQueue();
+
+    QTcpSocket *socket();
 
 private:
     KisImage *m_image;
@@ -46,7 +48,6 @@ class CollabServer : public QObject
     Q_OBJECT
 
 public:
-    CollabServer();
     ~CollabServer();
 
     bool start(const QHostAddress &addr, quint16 port);
