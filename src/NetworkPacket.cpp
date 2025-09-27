@@ -57,7 +57,7 @@ NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
 {
     auto device = node->paintDevice();
     auto pixelSize = device->pixelSize();
-    data.reserve(pixelSize * rect.width() * rect.height());
+    data.resize(pixelSize * rect.width() * rect.height());
     device->readBytes(reinterpret_cast<quint8 *>(data.data_ptr()), rect);
 }
 
@@ -67,7 +67,7 @@ NodePixelPatch::NodePixelPatch(QDataStream &s)
     s >> rect;
     int size;
     s >> size;
-    data.reserve(size);
+    data.resize(size);
     s.readRawData(data.data(), size);
 }
 
@@ -76,10 +76,14 @@ void NodePixelPatch::send(QDataStream &out)
     out << nodeId;
     out << rect;
     out << int(data.size());
-    out << data;
+    out.writeRawData(data.data(), data.size());
 }
 
 void NodePixelPatch::apply(KisImage *image)
 {
-    // TODO
+    auto node = KisLayerUtils::findNodeByUuid(image->root(), nodeId);
+    if (node == 0) {
+        return;
+    }
+    node->paintDevice()->writeBytes(reinterpret_cast<quint8 *>(data.data()), rect);
 }

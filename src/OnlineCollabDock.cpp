@@ -185,6 +185,15 @@ void OnlineCollabDock::setNetworkButtonState(bool running)
     m_portInput->setEnabled(!running);
 }
 
+void OnlineCollabDock::submitPacket(KisSharedPtr<DataPacket> p)
+{
+    if (m_isServer && m_server) {
+        m_server->broadcast(p->toNetworkPacket(), nullptr);
+    } else if (m_client) {
+        m_client->sendPacket(p);
+    }
+}
+
 void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
     qDebug() << "Node changed: " << node->name();
@@ -199,11 +208,7 @@ void OnlineCollabDock::nodeChanged(KisNodeSP node)
         return;
     }
 
-    if (m_isServer && m_server) {
-        m_server->broadcast(p->toNetworkPacket(), nullptr);
-    } else if (m_client) {
-        m_client->sendPacket(p);
-    }
+    submitPacket(p);
 }
 
 void OnlineCollabDock::imageUpdated(const QRect &rect)
@@ -213,6 +218,5 @@ void OnlineCollabDock::imageUpdated(const QRect &rect)
     auto view = m_canvas->imageView();
     auto node = view->currentNode();
     qDebug() << "Current node: " << node->name();
-    NodePixelPatch n(node.data(), rect);
-    // m_client.sendPacket(&n);
+    submitPacket(new NodePixelPatch(node.data(), rect));
 }

@@ -7,14 +7,15 @@
 #include <QPushButton>
 #include <QTcpSocket>
 
-#include "KisViewManager.h"
-#include "kis_canvas2.h"
-#include "kis_image.h"
-#include "kis_paint_device.h"
-#include "kis_types.h"
+#include <KisViewManager.h>
+#include <kis_canvas2.h>
+#include <kis_image.h>
+#include <kis_paint_device.h>
+#include <kis_types.h>
 #include <KoCanvasBase.h>
 #include <KoCanvasObserverBase.h>
 #include <KoShapeController.h>
+#include <kis_shared_ptr.h>
 #include <klocalizedstring.h>
 #include <kundo2stack.h>
 
@@ -36,6 +37,7 @@ public:
     void setNetworkButtonState(bool running);
     void setStatusText(QString text);
     void clearStatusText();
+    void submitPacket(KisSharedPtr<DataPacket> p);
 
 public Q_SLOTS:
     void nodeChanged(KisNodeSP node);
