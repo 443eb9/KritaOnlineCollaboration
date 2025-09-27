@@ -2,11 +2,11 @@
 #define _ONLINE_COLLAB_DOCK_H_
 
 #include <QDockWidget>
+#include <QElapsedTimer>
 #include <QLineEdit>
 #include <QObject>
 #include <QPushButton>
 #include <QTcpSocket>
-#include <QElapsedTimer>
 
 #include <KisViewManager.h>
 #include <KoCanvasBase.h>
@@ -21,6 +21,7 @@
 #include <kundo2stack.h>
 
 #include "CollabNetwork.h"
+#include "ImageChangeAnalyzer.h"
 
 struct ChangeHistory {
     QTime time;
@@ -46,17 +47,16 @@ public:
 
 public Q_SLOTS:
     void nodeChanged(KisNodeSP node);
-    void imageUpdated(const QRect &rect);
+    void nodePixelChanged(KisNodeSP node, const QRect &rect);
 
 private:
     int lastIndex = 0;
     bool m_isServer;
 
-    QElapsedTimer m_lastNodeChange;
-
     KisCanvas2 *m_canvas;
     CollabServer *m_server;
     CollabClient *m_client;
+    ImageChangeAnalyzer *m_analyzer;
 
     QLabel *m_statusText;
     QPushButton *m_startServerBtn;

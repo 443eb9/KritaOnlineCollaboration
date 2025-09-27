@@ -44,6 +44,7 @@ void PaintLayerMetadata::apply(KisImage *image)
     layer->setVisible(visible);
     layer->setAlphaLocked(alphaLocked);
     layer->setCompositeOpId(compositeOp);
+    layer->setDirty();
 }
 
 NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
@@ -65,8 +66,7 @@ NodePixelPatch::NodePixelPatch(QDataStream &s)
     s >> rect;
     quint32 size;
     s >> size;
-    // data.resize(size);
-    // s.readRawData(data.data(), size);
+    data.resize(size);
     s.readRawData(reinterpret_cast<char *>(data.data()), size);
 }
 
@@ -83,7 +83,9 @@ void NodePixelPatch::apply(KisImage *image)
 {
     auto node = KisLayerUtils::findNodeByUuid(image->root(), nodeId);
     if (node == 0) {
+        qDebug() << "Node not found";
         return;
     }
-    node->paintDevice()->writeBytes(reinterpret_cast<quint8 *>(data.data()), rect);
+    node->paintDevice()->writeBytes(data.data(), rect);
+    node->paintDevice()->setDirty(rect);
 }

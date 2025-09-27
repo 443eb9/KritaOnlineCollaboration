@@ -8,8 +8,7 @@
 #include <QSpacerItem>
 #include <QVBoxLayout>
 
-#include <KoDocumentResourceManager.h>
-#include <KoToolProxy.h>
+#include <KisDocument.h>
 #include <kis_command_utils.h>
 #include <kis_config.h>
 #include <kis_icon_utils.h>
@@ -23,6 +22,7 @@
 OnlineCollabDock::OnlineCollabDock()
     : m_server(0)
     , m_client(0)
+    , m_analyzer(0)
 {
     setWindowTitle(i18n("Online Collab"));
     auto mainWidget = new QWidget(this);
@@ -152,13 +152,12 @@ void OnlineCollabDock::setCanvas(KoCanvasBase *canvas)
         return;
     }
     m_canvas = myCanvas;
+    if (m_analyzer)
+        delete m_analyzer;
+    m_analyzer = new ImageChangeAnalyzer(m_canvas);
 
-    auto image = myCanvas->image();
-    auto root = image->root();
-
-    connect(image.data(), &KisImage::sigNodeChanged, this, &OnlineCollabDock::nodeChanged);
-    connect(image.data(), &KisImage::sigImageUpdated, this, &OnlineCollabDock::imageUpdated);
-    qDebug() << "Current image: " << image->root()->name();
+    connect(m_analyzer, &ImageChangeAnalyzer::sigNodeChanged, this, &OnlineCollabDock::nodeChanged);
+    connect(m_analyzer, &ImageChangeAnalyzer::sigNodePixelChanged, this, &OnlineCollabDock::nodePixelChanged);
 }
 
 void OnlineCollabDock::unsetCanvas()
@@ -196,8 +195,6 @@ void OnlineCollabDock::submitPacket(KisSharedPtr<DataPacket> p)
 
 void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
-    m_lastNodeChange.restart();
-
     qDebug() << "Node changed: " << node->name();
     KisSharedPtr<DataPacket> p = 0;
 
@@ -213,21 +210,11 @@ void OnlineCollabDock::nodeChanged(KisNodeSP node)
     submitPacket(p);
 }
 
-void OnlineCollabDock::imageUpdated(const QRect &rect)
+void OnlineCollabDock::nodePixelChanged(KisNodeSP node, const QRect &rect)
 {
     if (rect.width() == 0 || rect.height() == 0) {
         return;
     }
-    if (m_lastNodeChange.elapsed() < 10) {
-        // If there's a node change in 10 miliseconds, we consider
-        // this image update don't affect actual pixel data.
-        return;
-    }
 
-    qDebug() << "Image updated: " << rect;
-    auto image = m_canvas->image();
-    auto view = m_canvas->imageView();
-    auto node = view->currentNode();
-    qDebug() << "Current node: " << node->name();
     submitPacket(new NodePixelPatch(node.data(), rect));
 }
