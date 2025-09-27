@@ -38,7 +38,7 @@ public:
 
     QUuid nodeId;
     QRect rect;
-    QByteArray data;
+    QVector<quint8> data;
 
     virtual quint8 packetType()
     {

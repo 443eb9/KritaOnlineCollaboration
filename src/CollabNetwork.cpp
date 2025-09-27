@@ -13,7 +13,7 @@ CollabClient::CollabClient(QObject *parent, KisImage *image)
     : QObject(parent)
     , m_image(image)
     , m_socket(this)
-    , m_socketConnected(true)
+    , m_socketConnected(false)
     , m_curPacketExpectedSize(0)
 {
     connect(&m_socket, &QTcpSocket::connected, [this]() {
@@ -33,7 +33,7 @@ void CollabClient::connectTo(const QHostAddress &addr, quint16 port)
 
 void CollabClient::sendPacket(KisSharedPtr<DataPacket> p)
 {
-    qDebug() << "Sending packet" << m_socketConnected;
+    qDebug() << "Sending packet, connect state: " << m_socketConnected;
     if (m_socketConnected) {
         m_socket.write(p->toNetworkPacket());
     } else {
@@ -43,7 +43,7 @@ void CollabClient::sendPacket(KisSharedPtr<DataPacket> p)
 
 void CollabClient::sendQueue()
 {
-    if (m_socket.state() != QAbstractSocket::ConnectedState) {
+    if (!m_socketConnected) {
         return;
     }
 

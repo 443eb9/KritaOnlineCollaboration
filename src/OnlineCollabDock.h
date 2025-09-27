@@ -6,20 +6,25 @@
 #include <QObject>
 #include <QPushButton>
 #include <QTcpSocket>
+#include <QElapsedTimer>
 
 #include <KisViewManager.h>
-#include <kis_canvas2.h>
-#include <kis_image.h>
-#include <kis_paint_device.h>
-#include <kis_types.h>
 #include <KoCanvasBase.h>
 #include <KoCanvasObserverBase.h>
 #include <KoShapeController.h>
+#include <kis_canvas2.h>
+#include <kis_image.h>
+#include <kis_paint_device.h>
 #include <kis_shared_ptr.h>
+#include <kis_types.h>
 #include <klocalizedstring.h>
 #include <kundo2stack.h>
 
 #include "CollabNetwork.h"
+
+struct ChangeHistory {
+    QTime time;
+};
 
 class OnlineCollabDock : public QDockWidget, public KoCanvasObserverBase
 {
@@ -46,6 +51,8 @@ public Q_SLOTS:
 private:
     int lastIndex = 0;
     bool m_isServer;
+
+    QElapsedTimer m_lastNodeChange;
 
     KisCanvas2 *m_canvas;
     CollabServer *m_server;

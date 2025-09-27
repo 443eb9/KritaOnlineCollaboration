@@ -1,4 +1,5 @@
 #include <KoProperties.h>
+#include <kis_datamanager.h>
 #include <kis_image.h>
 #include <kis_layer_utils.h>
 #include <kis_paint_device.h>
@@ -50,27 +51,32 @@ NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
     , nodeId(node->uuid())
 {
     auto device = node->paintDevice();
-    auto pixelSize = device->pixelSize();
+    // auto pixelSize = device->pixelSize();
+    auto pixelSize = device->dataManager()->pixelSize();
     data.resize(pixelSize * rect.width() * rect.height());
-    device->readBytes(reinterpret_cast<quint8 *>(data.data_ptr()), rect);
+    qDebug() << "Created patch " << data.size();
+
+    device->readBytes(data.data(), rect);
 }
 
 NodePixelPatch::NodePixelPatch(QDataStream &s)
 {
     s >> nodeId;
     s >> rect;
-    int size;
+    quint32 size;
     s >> size;
-    data.resize(size);
-    s.readRawData(data.data(), size);
+    // data.resize(size);
+    // s.readRawData(data.data(), size);
+    s.readRawData(reinterpret_cast<char *>(data.data()), size);
 }
 
 void NodePixelPatch::send(QDataStream &out)
 {
     out << nodeId;
     out << rect;
-    out << int(data.size());
-    out.writeRawData(data.data(), data.size());
+    out << quint32(data.size());
+    qDebug() << "Writing " << data.size();
+    out.writeRawData(reinterpret_cast<char *>(data.data()), data.size());
 }
 
 void NodePixelPatch::apply(KisImage *image)

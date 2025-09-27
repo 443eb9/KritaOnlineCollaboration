@@ -196,6 +196,8 @@ void OnlineCollabDock::submitPacket(KisSharedPtr<DataPacket> p)
 
 void OnlineCollabDock::nodeChanged(KisNodeSP node)
 {
+    m_lastNodeChange.restart();
+
     qDebug() << "Node changed: " << node->name();
     KisSharedPtr<DataPacket> p = 0;
 
@@ -213,6 +215,15 @@ void OnlineCollabDock::nodeChanged(KisNodeSP node)
 
 void OnlineCollabDock::imageUpdated(const QRect &rect)
 {
+    if (rect.width() == 0 || rect.height() == 0) {
+        return;
+    }
+    if (m_lastNodeChange.elapsed() < 10) {
+        // If there's a node change in 10 miliseconds, we consider
+        // this image update don't affect actual pixel data.
+        return;
+    }
+
     qDebug() << "Image updated: " << rect;
     auto image = m_canvas->image();
     auto view = m_canvas->imageView();
