@@ -17,6 +17,8 @@ public:
 
 Q_SIGNALS:
     void sigNodeChanged(KisNodeSP node);
+    void sigNodeAdded(const QUuid &uuid);
+    void sigNodeRemoved(const QUuid &uuid);
     void sigNodePixelChanged(KisNodeSP node, const QRect &rect);
 
 private:
@@ -29,7 +31,7 @@ private:
     QRect m_updateRect;
 
     QHash<const KUndo2Command *, QRect> m_updateRectHistory;
-    QHash<const KUndo2Command *, KisNodeSP> m_changedNodeHistory;
+    QHash<const KUndo2Command *, QUuid> m_addedNodeHistory;
 
     void resetState();
 

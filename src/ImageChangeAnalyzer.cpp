@@ -60,14 +60,16 @@ void ImageChangeAnalyzer::undoIndexChanged(int index)
     // KisSavedCommand
     // KisSavedMacroCommand
     // KisNodePropertyListCommand
+    auto curNode = m_canvas->imageView()->currentNode();
     qDebug() << "Cur cmd: " << command->text();
 
     auto cmdSaved = dynamic_cast<const KisSavedCommand *>(command);
     if (cmdSaved) {
         if (isUndo) {
         } else {
-            emit sigNodePixelChanged(m_canvas->imageView()->currentNode(), m_updateRect);
-            qDebug() << "Captured pixel change on: " << m_canvas->imageView()->currentNode()->name() << m_updateRect;
+            emit sigNodePixelChanged(curNode, m_updateRect);
+            qDebug() << "Captured pixel change on: " << curNode->name() << m_updateRect;
+            m_updateRectHistory.insert(command, m_updateRect);
         }
     }
 
@@ -79,12 +81,24 @@ void ImageChangeAnalyzer::undoIndexChanged(int index)
                 emit sigNodeChanged(m_changedNode);
                 qDebug() << "Captured property change on: " << m_changedNode->name();
             }
+        } else if (m_addedNode) {
+            if (isUndo) {
+            } else {
+                emit sigNodeAdded(m_addedNode->uuid());
+                qDebug() << "Node added: " << m_addedNode->name();
+            }
+        } else if (!m_removedNode.isNull()) {
+            if (isUndo) {
+            } else {
+                emit sigNodeRemoved(m_removedNode);
+                qDebug() << "Node removed: " << m_removedNode;
+            }
         } else {
             if (isUndo) {
             } else {
-                emit sigNodePixelChanged(m_canvas->imageView()->currentNode(), m_updateRect);
-                qDebug() << "Captured pixel change on: " << m_canvas->imageView()->currentNode()->name()
-                         << m_updateRect;
+                emit sigNodePixelChanged(curNode, m_updateRect);
+                qDebug() << "Captured pixel change on: " << curNode->name() << m_updateRect;
+                m_updateRectHistory.insert(command, m_updateRect);
             }
         }
     }
@@ -95,7 +109,6 @@ void ImageChangeAnalyzer::undoIndexChanged(int index)
         } else {
             emit sigNodeChanged(m_changedNode);
             qDebug() << "Captured property change on: " << m_changedNode->name();
-            m_changedNodeHistory.insert(command, m_changedNode);
         }
     }
 
