@@ -4,6 +4,7 @@ set(
     OnlineCollabDock.cpp
     CollabNetwork.cpp
     NetworkPacket.cpp
+    StreamUtils.cpp
 )
 
 kis_add_library(kritaonlinecollab MODULE ${kritaonlinecollab_SOURCES})

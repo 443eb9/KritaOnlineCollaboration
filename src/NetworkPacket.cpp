@@ -5,6 +5,7 @@
 #include <kis_paint_layer.h>
 
 #include "NetworkPacket.h"
+#include "StreamUtils.h"
 
 PaintLayerMetadata::PaintLayerMetadata(const KisPaintLayer *node)
     : nodeId(node->uuid())
@@ -20,20 +21,13 @@ PaintLayerMetadata::PaintLayerMetadata(const KisPaintLayer *node)
 void PaintLayerMetadata::send(QDataStream &out)
 {
     out << nodeId << opacity << alphaInherit << locked << visible << alphaLocked;
-    out << quint32(compositeOp.size());
-    auto compositeOpBuf = compositeOp.toUtf8();
-    out.writeRawData(compositeOpBuf.data(), compositeOpBuf.size());
+    StreamUtils::writeStringToDataStream(compositeOp, out);
 }
 
 PaintLayerMetadata::PaintLayerMetadata(QDataStream &s)
 {
     s >> nodeId >> opacity >> alphaInherit >> locked >> visible >> alphaLocked;
-
-    quint32 compositeOpLen;
-    s >> compositeOpLen;
-    QVector<char> compositeOpBuf(compositeOpLen);
-    s.readRawData(compositeOpBuf.data(), compositeOpLen);
-    compositeOp = QString::fromUtf8(compositeOpBuf.data(), compositeOpLen);
+    compositeOp = StreamUtils::readStringFromDataStream(s);
 }
 
 void PaintLayerMetadata::apply(KisImage *image)

@@ -33,7 +33,7 @@ void CollabClient::connectTo(const QHostAddress &addr, quint16 port)
 
 void CollabClient::sendPacket(KisSharedPtr<DataPacket> p)
 {
-    qDebug() << "Sending packet";
+    qDebug() << "Sending packet" << m_socketConnected;
     if (m_socketConnected) {
         m_socket.write(p->toNetworkPacket());
     } else {
