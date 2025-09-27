@@ -15,6 +15,8 @@ class DataPacket : public KisShared
 public:
     static const quint8 NodeMetadataType = 0;
     static const quint8 NodePixelPatchType = 1;
+    static const quint8 NodeAddition = 2;
+    static const quint8 NodeRemoval = 3;
 
     virtual quint8 packetType();
     virtual void apply(KisImage *image);

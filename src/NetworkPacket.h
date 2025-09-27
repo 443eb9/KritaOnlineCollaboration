@@ -7,23 +7,40 @@
 
 #include "CollabNetwork.h"
 
-class PaintLayerMetadata : public DataPacket
+class NodeAddition : public DataPacket
 {
 public:
-    PaintLayerMetadata(const KisPaintLayer *node);
-    PaintLayerMetadata(QDataStream &s);
+    NodeAddition(const KisNode *node, quint32 type);
+    NodeAddition(const KisPaintLayer *node);
+    NodeAddition(QDataStream &s);
 
     QUuid nodeId;
-    quint8 opacity;
-    quint8 alphaInherit;
-    quint8 locked;
-    quint8 visible;
-    quint8 alphaLocked;
-    QString compositeOp;
+    quint32 actualType;
+    QUuid parentId;
+    QString name;
+    quint32 indexInChildren;
+    QVector<quint8> possibleData;
 
-    virtual quint8 packetType()
+    quint8 packetType() override
     {
-        return DataPacket::NodeMetadataType;
+        return DataPacket::NodeAddition;
+    }
+
+    void send(QDataStream &s) override;
+    void apply(KisImage *image) override;
+};
+
+class NodeRemoval : public DataPacket
+{
+public:
+    NodeRemoval(const QUuid &id);
+    NodeRemoval(QDataStream &s);
+
+    QUuid nodeId;
+
+    quint8 packetType() override
+    {
+        return DataPacket::NodeRemoval;
     }
 
     void send(QDataStream &s) override;
@@ -40,9 +57,32 @@ public:
     QRect rect;
     QVector<quint8> data;
 
-    virtual quint8 packetType()
+    quint8 packetType() override
     {
         return DataPacket::NodePixelPatchType;
+    }
+
+    void send(QDataStream &s) override;
+    void apply(KisImage *image) override;
+};
+
+class PaintLayerMetadata : public DataPacket
+{
+public:
+    PaintLayerMetadata(const KisPaintLayer *node);
+    PaintLayerMetadata(QDataStream &s);
+
+    QUuid nodeId;
+    quint8 opacity;
+    quint8 alphaInherit;
+    quint8 locked;
+    quint8 visible;
+    quint8 alphaLocked;
+    QString compositeOp;
+
+    quint8 packetType() override
+    {
+        return DataPacket::NodeMetadataType;
     }
 
     void send(QDataStream &s) override;

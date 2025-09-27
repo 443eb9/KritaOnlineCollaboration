@@ -108,6 +108,16 @@ void CollabClient::receiveBytes()
             p = new NodePixelPatch(in);
             break;
         }
+        case DataPacket::NodeAddition: {
+            qDebug("Received NodeAddition");
+            p = new NodeAddition(in);
+            break;
+        }
+        // case DataPacket::NodeRemoval: {
+        //     qDebug("Received NodeRemoval");
+        //     p = new NodeRemoval(in);
+        //     break;
+        // }
         default: {
             qDebug() << "Unknown packet type: " << type;
             return;

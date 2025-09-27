@@ -6,6 +6,7 @@
 #include <kis_paint_layer.h>
 
 #include "NetworkPacket.h"
+#include "NodeUtils.h"
 #include "StreamUtils.h"
 
 PaintLayerMetadata::PaintLayerMetadata(const KisPaintLayer *node)
@@ -45,6 +46,75 @@ void PaintLayerMetadata::apply(KisImage *image)
     layer->setAlphaLocked(alphaLocked);
     layer->setCompositeOpId(compositeOp);
     layer->setDirty();
+}
+
+NodeAddition::NodeAddition(const KisNode *node, quint32 type)
+    : nodeId(node->uuid())
+    , actualType(type)
+    , parentId(node->image()->root()->uuid() == node->parent()->uuid() ? QUuid() : node->parent()->uuid())
+    , name(node->name())
+    , indexInChildren(node->parent()->index(KisNodeSP(const_cast<KisNode *>(node))))
+{
+    auto extent = node->exactBounds();
+    if (!extent.isEmpty()) {
+        auto pixelSize = node->paintDevice()->dataManager()->pixelSize();
+        possibleData.resize(pixelSize * extent.width() * extent.height());
+        node->paintDevice()->readBytes(possibleData.data(), extent);
+    }
+}
+
+NodeAddition::NodeAddition(const KisPaintLayer *node)
+    : NodeAddition(node, LayerType::PaintLayer)
+{
+}
+
+NodeAddition::NodeAddition(QDataStream &s)
+{
+    s >> nodeId >> actualType >> parentId >> indexInChildren;
+    name = StreamUtils::readStringFromDataStream(s);
+
+    quint32 possibleDataLen;
+    s >> possibleDataLen;
+    if (possibleDataLen > 0) {
+        possibleData.resize(possibleDataLen);
+        s.readRawData(reinterpret_cast<char *>(possibleData.data()), possibleDataLen);
+    }
+}
+
+void NodeAddition::send(QDataStream &s)
+{
+    s << nodeId << actualType << parentId << indexInChildren;
+    StreamUtils::writeStringToDataStream(name, s);
+
+    s << quint32(possibleData.size());
+    if (possibleData.size() > 0) {
+        s.writeRawData(reinterpret_cast<char *>(possibleData.data()), possibleData.size());
+    }
+}
+
+void NodeAddition::apply(KisImage *image)
+{
+    auto parent = parentId.isNull() ? image->root() : KisLayerUtils::findNodeByUuid(image->root(), parentId);
+    if (!parent) {
+        // TODO hint
+        qDebug() << "Cannot find parent node";
+        return;
+    }
+
+    KisNodeSP newNode = 0;
+    switch (actualType) {
+    case LayerType::PaintLayer: {
+        newNode = new KisPaintLayer(image, name, 255);
+        break;
+    }
+    default: {
+        qDebug() << "Unknown node type: " << actualType;
+        break;
+    }
+    }
+
+    newNode->setUuid(nodeId);
+    image->addNode(newNode, parent, indexInChildren);
 }
 
 NodePixelPatch::NodePixelPatch(const KisNode *node, const QRect &rect)
@@ -87,5 +157,5 @@ void NodePixelPatch::apply(KisImage *image)
         return;
     }
     node->paintDevice()->writeBytes(data.data(), rect);
-    node->paintDevice()->setDirty(rect);
+    node->setDirty(rect);
 }

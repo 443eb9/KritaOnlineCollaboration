@@ -6,6 +6,7 @@ set(
     NetworkPacket.cpp
     StreamUtils.cpp
     ImageChangeAnalyzer.cpp
+    NodeUtils.cpp
 )
 
 kis_add_library(kritaonlinecollab MODULE ${kritaonlinecollab_SOURCES})

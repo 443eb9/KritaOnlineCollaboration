@@ -12,11 +12,13 @@
 #include <kis_command_utils.h>
 #include <kis_config.h>
 #include <kis_icon_utils.h>
+#include <kis_layer_utils.h>
 #include <kis_paint_layer.h>
 #include <kis_transaction.h>
 
 #include "CollabNetwork.h"
 #include "NetworkPacket.h"
+#include "NodeUtils.h"
 #include "OnlineCollabDock.h"
 
 OnlineCollabDock::OnlineCollabDock()
@@ -157,6 +159,15 @@ void OnlineCollabDock::setCanvas(KoCanvasBase *canvas)
     m_analyzer = new ImageChangeAnalyzer(m_canvas);
 
     connect(m_analyzer, &ImageChangeAnalyzer::sigNodeChanged, this, &OnlineCollabDock::nodeChanged);
+    connect(m_analyzer, &ImageChangeAnalyzer::sigNodeAdded, [this](const QUuid &nodeId) {
+        KisNodeSP node = 0;
+        while (node == 0) {
+            node = KisLayerUtils::findNodeByUuid(m_canvas->image().toStrongRef()->root(), nodeId);
+        }
+
+        qDebug() << "Found node: " << node->name();
+        submitPacket(new NodeAddition(node.data(), LayerType::resolveNodeLayerType(node.data())));
+    });
     connect(m_analyzer, &ImageChangeAnalyzer::sigNodePixelChanged, this, &OnlineCollabDock::nodePixelChanged);
 }
 
