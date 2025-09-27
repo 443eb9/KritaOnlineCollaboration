@@ -61,55 +61,72 @@ void ImageChangeAnalyzer::undoIndexChanged(int index)
     // KisSavedMacroCommand
     // KisNodePropertyListCommand
     auto curNode = m_canvas->imageView()->currentNode();
-    qDebug() << "Cur cmd: " << command->text();
+    qDebug() << "Cur cmd: " << command->text() << ", is undo: " << isUndo;
 
     auto cmdSaved = dynamic_cast<const KisSavedCommand *>(command);
     if (cmdSaved) {
         if (isUndo) {
+            const auto [node, rect] = m_updateRectHistory[command];
+            // TODO check if the node still valid
+            qDebug() << "Reverting pixel change on: " << node->name() << rect;
+            emit sigNodePixelChanged(node, rect);
         } else {
             emit sigNodePixelChanged(curNode, m_updateRect);
             qDebug() << "Captured pixel change on: " << curNode->name() << m_updateRect;
-            m_updateRectHistory.insert(command, m_updateRect);
+            m_updateRectHistory.insert(command, qMakePair(curNode, m_updateRect));
         }
     }
 
     auto cmdSavedMacro = dynamic_cast<const KisSavedMacroCommand *>(command);
     if (cmdSavedMacro) {
-        if (m_changedNode) {
-            if (isUndo) {
+        if (isUndo) {
+            if (auto changed = m_changedNodeHistory.find(command); changed != m_changedNodeHistory.end()) {
+                auto node = changed.value();
+                // TODO check if the node still valid
+                emit sigNodeChanged(changed.value());
+                qDebug() << "Reverting property change on: " << changed.value()->name();
+            } else if (auto added = m_addedNodeHistory.find(command); added != m_addedNodeHistory.end()) {
+                auto node = added.value();
+                emit sigNodeRemoved(node);
+                qDebug() << "Reverting node added: " << node;
+            } else if (auto removed = m_removedNodeHistory.find(command); removed != m_removedNodeHistory.end()) {
+                auto node = removed.value();
+                emit sigNodeAdded(m_removedNode);
+                qDebug() << "Reverting node removed: " << node;
             } else {
-                emit sigNodeChanged(m_changedNode);
-                qDebug() << "Captured property change on: " << m_changedNode->name();
-            }
-        } else if (m_addedNode) {
-            if (isUndo) {
-            } else {
-                emit sigNodeAdded(m_addedNode->uuid());
-                qDebug() << "Node added: " << m_addedNode->name();
-            }
-        } else if (!m_removedNode.isNull()) {
-            if (isUndo) {
-            } else {
-                emit sigNodeRemoved(m_removedNode);
-                qDebug() << "Node removed: " << m_removedNode;
+                const auto [node, rect] = m_updateRectHistory[command];
+                // TODO check if the node still valid
+                qDebug() << "Reverting pixel change on: " << node->name() << rect;
+                emit sigNodePixelChanged(node, rect);
             }
         } else {
-            if (isUndo) {
+            if (m_changedNode) {
+                emit sigNodeChanged(m_changedNode);
+                m_changedNodeHistory.insert(command, m_changedNode);
+                qDebug() << "Captured property change on: " << m_changedNode->name();
+            } else if (m_addedNode) {
+                emit sigNodeAdded(m_addedNode->uuid());
+                m_addedNodeHistory.insert(command, m_addedNode->uuid());
+                qDebug() << "Node added: " << m_addedNode->name();
+            } else if (!m_removedNode.isNull()) {
+                emit sigNodeRemoved(m_removedNode);
+                m_removedNodeHistory.insert(command, m_removedNode);
+                qDebug() << "Node removed: " << m_removedNode;
             } else {
-                emit sigNodePixelChanged(curNode, m_updateRect);
-                qDebug() << "Captured pixel change on: " << curNode->name() << m_updateRect;
-                m_updateRectHistory.insert(command, m_updateRect);
+                if (isUndo) {
+                } else {
+                    emit sigNodePixelChanged(curNode, m_updateRect);
+                    qDebug() << "Captured pixel change on: " << curNode->name() << m_updateRect;
+                    m_updateRectHistory.insert(command, qMakePair(curNode, m_updateRect));
+                }
             }
         }
     }
 
     auto cmdNodePropList = dynamic_cast<const KisNodePropertyListCommand *>(command);
     if (cmdNodePropList) {
-        if (isUndo) {
-        } else {
-            emit sigNodeChanged(m_changedNode);
-            qDebug() << "Captured property change on: " << m_changedNode->name();
-        }
+        emit sigNodeChanged(m_changedNode);
+        qDebug() << "Captured property change on: " << m_changedNode->name();
     }
 
     resetState();

@@ -30,8 +30,10 @@ private:
     QUuid m_removedNode;
     QRect m_updateRect;
 
-    QHash<const KUndo2Command *, QRect> m_updateRectHistory;
+    QHash<const KUndo2Command *, QPair<KisNodeWSP, QRect>> m_updateRectHistory;
+    QHash<const KUndo2Command *, KisNodeWSP> m_changedNodeHistory;
     QHash<const KUndo2Command *, QUuid> m_addedNodeHistory;
+    QHash<const KUndo2Command *, QUuid> m_removedNodeHistory;
 
     void resetState();
 
